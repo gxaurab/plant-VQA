@@ -11,6 +11,6 @@ outputs/
 __pycache__/
 *.pyc
 
-# Virtual environments
+# Virtual envirwonments
 .venv/
 venv/
