@@ -125,6 +125,7 @@ class QwenVLCollator:
         self.processor = processor
         self.tokenizer = processor.tokenizer
         self.max_length = max_length
+        self.dropped = 0
 
         self.tokenizer.padding_side = "right"
 
@@ -192,6 +193,7 @@ class QwenVLCollator:
 
             if start is None:
                 labels[i] = -100
+                self.dropped += 1
             else:
                 labels[i, :start] = -100
 

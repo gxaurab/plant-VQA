@@ -95,6 +95,11 @@ def main():
 
     use_bf16 = bool(tcfg.get("bf16", False))
     use_fp16 = bool(tcfg.get("fp16", False))
+
+    if not use_bf16 and not use_fp16:
+        print("WARNING: neither bf16 nor fp16 enabled. Defaulting to bf16.")
+        use_bf16 = True
+
     dtype = torch.bfloat16 if use_bf16 else torch.float16
 
     print("Loading model ...")
@@ -170,6 +175,23 @@ def main():
     # ---- data ----
     train_df = load_qa_table(dcfg["train_csv"], dcfg["train_images"])
     val_df = load_qa_table(dcfg["val_csv"], dcfg["val_images"])
+
+    # Remove unusable QA rows
+    for name, df in [("train", train_df), ("val", val_df)]:
+        before = len(df)
+
+        df.drop(
+            df[
+                df["answer"].isna()
+                | (df["answer"].astype(str).str.strip() == "")
+            ].index,
+            inplace=True,
+        )
+
+        removed = before - len(df)
+
+        if removed:
+            print(f"{name}: removed {removed} empty-answer rows")
 
     # eval on a fixed subsample during training - the full val set every
     # eval_steps would add ~25% to runtime for no benefit in checkpoint choice
