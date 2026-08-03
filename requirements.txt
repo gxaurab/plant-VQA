@@ -22,3 +22,17 @@ tqdm==4.69.0
 regex==2026.7.19
 
 sentencepiece
+
+
+rouge-score
+bert-score
+
+tqdm
+
+#from transformers download the "roberta-large" BERT score model 
+#it scores in some cache files where it has stored model
+#store models manually? inside making models
+#same for the QWEN model 
+
+
+

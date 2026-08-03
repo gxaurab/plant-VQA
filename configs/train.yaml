@@ -1,4 +1,4 @@
-model_id: Qwen/Qwen3-VL-2B-Instruct
+model_id: Qwen/Qwen3-VL-2B-Instruct #change path here for offline downloaded model
 
 data:
   train_csv: data/train.csv
