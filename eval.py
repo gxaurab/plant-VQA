@@ -131,7 +131,6 @@ def main():
 
     min_px, max_px = load_vision_budget(args.adapter)
     print(f"vision budget: min={min_px:,} max={max_px:,} px")
-
     processor = AutoProcessor.from_pretrained(
         args.model_id, min_pixels=min_px, max_pixels=max_px)
     processor.tokenizer.padding_side = "left"
@@ -203,6 +202,7 @@ def score(df, with_bertscore=True, bertscore_model=None):
         kw = dict(batch_size=64, rescale_with_baseline=False)
         if bertscore_model:
             kw["model_type"] = bertscore_model
+            #added num layers = 17
         else:
             kw["model_type"] = "roberta-large" #Put the path to the model
 

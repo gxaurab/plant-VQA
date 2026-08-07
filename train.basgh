@@ -1,0 +1,100 @@
+#!/bin/bash
+#SBATCH --job-name=m3_pi05_full
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=16
+#SBATCH --gres=gpu:1
+#SBATCH --time=20:00:00
+#SBATCH --partition=gpu-a100
+#SBATCH --account=research-abe
+# =============================================================================
+# Milestone 3 — pi05 ablation arm: FULL (vision + tactile + force)
+#
+#   cameras: ext1 + ext2 + wrist_rgb + digit_left + digit_right   (5)
+#   state:   28-dim (wrench IN)          action: 7-dim (j3 dropped)
+#   dataset: winnerbishal/put_one_strawberry_v0_m3_full
+#
+# One self-contained sbatch, ONE A100 (--gres=gpu:1). Submit all four arm folders
+# and they co-run on your 4-GPU quota (QoS: gres/gpu:a100=4, MaxNodes=1, 48h).
+#
+# 30k steps matches pi05_base's scheduler_decay_steps=30000 so the cosine decay
+# completes as designed (~1.4 epochs over 169k frames at batch 8, ~6-7h @ ~0.7s/step).
+#
+# PRE-STAGE (once, login node): pi05_base + PaliGemma tokenizer already cached from
+# Milestone 2 (prestage_pi05). Dataset must be transferred to ptolemy first.
+#
+#   sbatch train.bash
+#   tail -f logs/m3_pi05_full_<jobid>.out
+# =============================================================================
+ 
+SCRATCH_DIR="/scratch/ptolemy/users/ba974"
+VENV_PATH="$SCRATCH_DIR/projects/.venv_lerobot"
+ 
+REPO_ID="winnerbishal/put_one_strawberry_v0_m3_full"
+OUTPUT_DIR="$SCRATCH_DIR/outputs/m3_pi05_full"
+ 
+export HF_HOME="$SCRATCH_DIR/.cache/huggingface"
+export WANDB_DIR="$SCRATCH_DIR/wandb"
+export WANDB_CACHE_DIR="$SCRATCH_DIR/.cache/wandb"
+export CUDA_LAUNCH_BLOCKING=0
+export HF_DATASETS_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export HF_HUB_OFFLINE=1
+export WANDB_MODE=offline
+ 
+module purge
+module load python/3.10.8
+module load cuda/12.1.1
+module load ffmpeg
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}${FFMPEG_ROOT:+:$FFMPEG_ROOT/lib}"
+source "$VENV_PATH/bin/activate"
+ 
+mkdir -p logs
+echo "=== M3 pi05 FULL (vision+tactile+force) ==="
+echo " host : $(hostname)   job: ${SLURM_JOB_ID:-<none>}   CVD=${CUDA_VISIBLE_DEVICES:-<none>}"
+nvidia-smi -L || { echo "FATAL: no GPU visible — did you sbatch it?"; exit 1; }
+python -c "import torch; assert torch.cuda.is_available(); print('torch', torch.__version__, 'sees', torch.cuda.device_count(), 'GPU(s)')" || exit 1
+echo " dataset: $REPO_ID"
+echo " output : $OUTPUT_DIR"
+echo " cams=5 (ext1+ext2+wrist+digitL+digitR) state=28 action=7"
+echo "==========================================="
+ 
+# --- GPU stats logger (jobmon tails this; srun --overlap blocked) ---
+GPU_CSV="logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}_gpu.csv"
+echo "timestamp,gpu_index,util_gpu_pct,mem_used_mib,mem_total_mib,power_w,temp_c" > "$GPU_CSV"
+( while true; do
+    nvidia-smi --query-gpu=timestamp,index,utilization.gpu,memory.used,memory.total,power.draw,temperature.gpu \
+               --format=csv,noheader,nounits >> "$GPU_CSV" 2>/dev/null
+    sleep 10
+  done ) &
+GPU_MON_PID=$!
+trap "kill $GPU_MON_PID 2>/dev/null" EXIT
+ 
+# pi05 from base checkpoint. Scene-only camera-selection is enforced by the DATASET
+# (only this arm's cameras exist). compile_model=true for a real run (long enough to
+# amortize the compile). No rename_map (pi05 matches image keys by name).
+python -m lerobot.scripts.lerobot_train \
+  --policy.type=pi05 \
+  --policy.pretrained_path=lerobot/pi05_base \
+  --policy.device=cuda \
+  --policy.dtype=bfloat16 \
+  --policy.gradient_checkpointing=true \
+  --policy.compile_model=true \
+  --dataset.repo_id="$REPO_ID" \
+  --dataset.video_backend=pyav \
+  --output_dir="$OUTPUT_DIR" \
+  --job_name=m3_pi05_full \
+  --batch_size=8 \
+  --steps=30000 \
+  --save_freq=5000 \
+  --log_freq=100 \
+  --policy.push_to_hub=false \
+  --wandb.enable=false \
+ 
+echo
+echo "=== training done. checkpoints: ==="
+ls -la "$OUTPUT_DIR/checkpoints/" 2>/dev/null || echo "  (no checkpoints — investigate)"
+echo "Then: sbatch infer_check.bash"
+ 
