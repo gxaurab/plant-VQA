@@ -1,0 +1,2 @@
+Insect VQA dataset link: https://drive.google.com/drive/folders/1ZW3hrLp-ByK1zTy9Uv31m11moXOQ5i-M
+PlantExpertVQA dataset link: https://huggingface.co/datasets/SyedNazmusSakib/PlantExpertVQA

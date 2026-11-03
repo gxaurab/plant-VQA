@@ -13,6 +13,8 @@
 *.GIF
 data/images/
 all_data/images/
+csv/images/
+DATA/images/
 **/images/
 pre-Image.png
 
