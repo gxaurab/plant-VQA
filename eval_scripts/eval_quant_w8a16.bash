@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=qwen3vl_eval_int4
+#SBATCH --job-name=qwen3vl_eval_int8
 #SBATCH --output=/scratch/ptolemy/users/ba974/weedAI/plant-VQA/logs/%x_%j.out
 #SBATCH --error=/scratch/ptolemy/users/ba974/weedAI/plant-VQA/logs/%x_%j.err
 #SBATCH --nodes=1
@@ -11,14 +11,14 @@
 #SBATCH --account=research-abe
 #SBATCH --chdir=/scratch/ptolemy/users/ba974/weedAI/plant-VQA
 # =============================================================================
-# Evaluate the QUANTIZED W4A16 (INT4) model. Same eval_quant.py, INT4 paths.
-#   sbatch scripts/eval_quant_w4a16.bash
+# Evaluate the QUANTIZED INT8 model. Uses .venvQuant (where it loads correctly).
+#   sbatch scripts/eval_quant.bash
 # =============================================================================
 
 SCRATCH_DIR="/scratch/ptolemy/users/ba974"
 PROJECT_DIR="$SCRATCH_DIR/weedAI/plant-VQA"
-VENV_PATH="$SCRATCH_DIR/weedAI/.venvQuant"                 # same env that loads INT8
-QUANT_MODEL="$PROJECT_DIR/outputs/qwen3vl/merged-w4a16"    # <-- W4A16 model dir
+VENV_PATH="$SCRATCH_DIR/weedAI/.venvQuant"                 # the env that loads INT8
+QUANT_MODEL="$PROJECT_DIR/outputs/qwen3vl/merged-w8a16"
 ROBERTA_DIR="$SCRATCH_DIR/weedAI/roberta-large"
 
 [ -f "$PROJECT_DIR/.env" ] && { set -a; source "$PROJECT_DIR/.env"; set +a; }
@@ -46,11 +46,12 @@ python eval_quant.py \
   --model    "$QUANT_MODEL" \
   --test_csv "$PROJECT_DIR/data/test3k/test_3k.csv" \
   --images   "$PROJECT_DIR/data/test3k/images/" \
-  --out      "$PROJECT_DIR/outputs/eval_int4_withbert.csv" \
+  --out      "$PROJECT_DIR/outputs/eval_int8_withbert.csv" \
   --bertscore_model "$ROBERTA_DIR" \
   --min_pixels_factor 128 \
   --max_pixels_factor 256 \
   --batch_size 8 \
-  --max_new_tokens 160
+  --max_new_tokens 160 
+ 
 
-echo "=== INT4 eval done ==="
+echo "=== INT8 eval done ==="

@@ -1,17 +1,61 @@
-# Data
-data/
-
-# Outputs
-outputs/
+# Images
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.gif
+*.bmp
+*.tiff
+*.JPG
+*.JPEG
+*.PNG
+*.WEBP
+*.GIF
+data/images/
+all_data/images/
+**/images/
+pre-Image.png
 
 # Archives
 *.zip
+*.tar
+*.gz
+*.tgz
+*.rar
+*.7z
+
+# Data
+data/__pycache__/
+
+# Outputs & Results
+outputs/
+evaluation-results/
+Plant_QWEN_METRICS_CATEGORY/
+INSECT/
+
+# Models & Large Checkpoints
+llava_plantXpert/models/
+code-llava_plantXpert/models/
+1SMOOTH_QUANT/
+AWQ/
+
+# Logs & SLURM outputs
+*.err
+*.out
+*.log
 
 # Python
 __pycache__/
 *.pyc
-
-# Virtual envirwonments
 .venv/
 venv/
 
+# Environment
+.env
+
+# Scripts to ignore
+eval.bash
+eval.py
+mergeandverifyqwen.py
+mergeqwen.bash
+tran.py
